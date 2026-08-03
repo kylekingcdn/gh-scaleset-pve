@@ -1,0 +1,17 @@
+{
+  "actions" : {
+    "build" : {
+      "enabled" : true,
+      "script" : "cargo clippy --keep-going"
+    },
+    "clean" : {
+      "enabled" : true,
+      "script" : "cargo clean"
+    },
+    "run" : {
+      "enabled" : true,
+      "script" : "cargo build"
+    }
+  },
+  "openLogOnRun" : "start"
+}

@@ -1,0 +1,16 @@
+{
+  "eablokker.tabsSidebar.config.collapsedFolders" : [
+
+  ],
+  "eablokker.tabsSidebar.config.customKindGroupsOrder" : [
+    "rust",
+    "toml",
+    "python",
+    "json"
+  ],
+  "index.ignored_file_patterns" : [
+    ".git"
+  ],
+  "workspace.color" : 9,
+  "workspace.name" : "gh-pve-webhook"
+}

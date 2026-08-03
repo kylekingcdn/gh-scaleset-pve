@@ -1,0 +1,21 @@
+# Build outputs
+target/
+schemas/
+
+# IDE files
+.idea/
+*.iml
+
+# Config files
+.env
+.envrc
+*.env
+
+# Log files
+crash.log
+
+# macOS
+.DS_Store
+
+# Auto-gen
+.cargo-ok

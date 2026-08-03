@@ -1,0 +1,48 @@
+name: Docker Image CI
+
+on:
+  push:
+    branches:
+      - main
+      - feature/*
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  IMAGE_ENDPOINT: ghcr.io/${{ github.repository }}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+    - name: Checkout repo
+      uses: actions/checkout@v6
+
+    - name: Test image
+      run: docker build --target test .
+
+    - name: Login to container registry
+      run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+    - name: Build prod images + generate schemas
+      run: |
+        docker build --target prod_api --tag "${IMAGE_NAME}" .
+    - name: Fix schema file permissions
+      run: docker run --volume ./schemas:/schemas alpine:3 chown -R $(id -u):$(id -g) /schemas
+
+    - name: Add SHA-1 tag to images
+      run: |
+        docker tag ${IMAGE_NAME} "${IMAGE_ENDPOINT}:$(echo "${{ github.sha }}" | head -c7)"
+    - name: Push SHA-1 tags
+      run: |
+        docker push "${IMAGE_ENDPOINT}:$(echo "${{ github.sha }}" | head -c7)"
+
+    - name: Add ref tag to images
+      run: |
+        docker tag ${IMAGE_NAME} "${IMAGE_ENDPOINT}:${GITHUB_REF_NAME//\//-}"
+    - name: Push ref tags
+      run: |
+        docker push "${IMAGE_ENDPOINT}:${GITHUB_REF_NAME//\//-}"

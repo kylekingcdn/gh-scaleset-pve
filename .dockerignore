@@ -1,0 +1,33 @@
+# system
+**/.DS_Store
+
+# docker
+**/.dockerignore
+**/Dockerfile
+**/*.Dockerfile
+
+# env
+**/.env
+**/.env.*
+**/*.env
+
+# git
+**/.git
+**/.github
+**/.gitignore
+
+# IDE / tools
+**/.nova/
+**/.bruno/
+**/*.paw
+**/.idea
+
+# local generated + misc files
+**/schemas/
+**/target/
+**/*.log
+/recipe.json
+/docker/
+/notes/
+/reference/
+/scripts/
