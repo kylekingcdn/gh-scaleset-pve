@@ -16,7 +16,7 @@ RUN \
 
 FROM base AS prod_build
 RUN \
-    cargo install
+    cargo build --release
 
 # -- Prod base/common runtime -- #
 
@@ -39,7 +39,7 @@ LABEL org.opencontainers.image.description="gh-pve-webhook"
 LABEL org.opencontainers.image.source=https://github.com/kylekingcdn/gh-pve-webhook-rs
 
 COPY --from=prod_build \
-    /usr/local/cargo/bin/gh-pve-webhook /usr/local/bin/gh-pve-webhook
+    /app/target/release/gh-pve-webhook /usr/local/bin/gh-pve-webhook
 
 # Use entrypoint over command to allow for generate cmd invocation
 ENTRYPOINT ["/usr/local/bin/gh-pve-webhook"]
