@@ -1,0 +1,46 @@
+#cloud-config
+# vars:
+# - VMID
+# - GH_REPO (owner/repo-name)
+# - RUNNER_TOKEN
+# - RUNNER_LABELS (comma separated)
+hostname: ci-runner-${VMID}
+manage_etc_hosts: true
+users:
+  - name: runner
+    groups: [docker]
+    sudo: ['ALL=(ALL) NOPASSWD:ALL']
+    shell: /bin/bash
+write_files:
+  - path: /etc/systemd/system/runner-oneshot.service
+    permissions: '0644'
+    content: |
+      [Unit]
+      Description=Ephemeral GitHub Actions runner
+      After=network-online.target docker.service
+      Wants=network-online.target
+      [Service]
+      Type=oneshot
+      User=runner
+      WorkingDirectory=/home/runner/actions-runner
+      ExecStart=/home/runner/actions-runner/run-once.sh
+      # The whole VM is killed after the runner exits
+      ExecStopPost=/usr/bin/sudo /sbin/shutdown -h now
+      [Install]
+      WantedBy=multi-user.target
+  - path: /home/runner/actions-runner/run-once.sh
+    permissions: '0755'
+    owner: runner:runner
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+      cd /home/runner/actions-runner
+      ./config.sh \
+        --url https://github.com/${GH_REPO} \
+        --token ${RUNNER_TOKEN} \
+        --name ci-runner-${VMID} \
+        --labels ${LABELS} \
+        --ephemeral --unattended --disableupdate
+      ./run.sh
+runcmd:
+  - [ systemctl, enable, --now, runner-oneshot.service ]

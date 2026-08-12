@@ -1,3 +1,4 @@
+pub(crate) mod cloud_config;
 pub(crate) mod conf;
 pub(crate) mod middleware;
 pub(crate) mod provision;

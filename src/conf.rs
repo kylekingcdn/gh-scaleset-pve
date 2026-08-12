@@ -76,9 +76,6 @@ pub(crate) struct ApiConfig {
     #[serde(default = "ApiConfig::listen_port_default")]
     /// Defaults to 8080
     pub listen_port: u16,
-
-    // #[serde(default)]
-    // pub cors: ApiCorsConfig,
 }
 impl ApiConfig {
     #[must_use]
@@ -95,34 +92,9 @@ impl Default for ApiConfig {
         Self {
             listen_host: Self::listen_host_default(),
             listen_port: Self::listen_port_default(),
-
-            // cors: ApiCorsConfig::default(),
         }
     }
 }
-
-// #[serde_as]
-// #[derive(Debug, Default, Clone, Deserialize)]
-// pub(crate) struct ApiCorsConfig {
-//     /// Defaults to false
-//     #[serde(default)]
-//     pub enable: bool,
-//
-//     #[serde(default, skip_serializing_if = "Option::is_none")]
-//     #[serde_as(as = "Option<StringWithSeparator::<CommaSeparator, String>>")]
-//     pub allow_origin: Option<String>,
-//     #[serde(default, skip_serializing_if = "Option::is_none")]
-//     #[serde_as(as = "Option<StringWithSeparator::<CommaSeparator, String>>")]
-//     pub allow_headers: Option<Vec<String>>,
-//     #[serde(default, skip_serializing_if = "Option::is_none")]
-//     #[serde_as(as = "Option<StringWithSeparator::<CommaSeparator, String>>")]
-//     pub allow_methods: Option<Vec<String>>,
-//     #[serde(default, skip_serializing_if = "Option::is_none")]
-//     pub allow_credentials: Option<bool>,
-//     #[serde(default, skip_serializing_if = "Option::is_none")]
-//     #[serde_as(as = "Option<StringWithSeparator::<CommaSeparator, String>>")]
-//     pub expose_headers: Option<Vec<String>>,
-// }
 
 #[serde_as]
 #[derive(Debug, Clone, Deserialize)]
@@ -169,6 +141,9 @@ pub(crate) struct PveConfig {
 
     pub template_vmid: u16,
 
+    pub snippets_local_dir: String,
+    pub snippets_template_name: String,
+
     #[serde(default = "PveConfig::runner_vmid_min_default")]
     pub runner_vmid_min: u16,
     #[serde(default = "PveConfig::runner_vmid_max_default")]
@@ -182,6 +157,9 @@ impl PveConfig {
     #[must_use]
     pub fn runner_vmid_max_default() -> u16 {
         5999
+    }
+    pub fn snippets_template_path(&self) -> String {
+        format!("{}/{}", self.snippets_local_dir, self.snippets_template_name)
     }
 }
 

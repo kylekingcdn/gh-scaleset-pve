@@ -1,9 +1,12 @@
-use crate::conf::PveConfig;
+use crate::{
+    cloud_config::{CloudConfigGenerator,CloudConfigParams},
+    conf::PveConfig,
+};
 
-use proxmox_client::{ProxmoxClient, nodes::qemu::VmCloneParams};
-
+use proxmox_client::{ProxmoxClient, nodes::qemu::{VmConfigUpdateParams, VmCloneParams}};
 use secrecy::{ExposeSecret, SecretString};
-use std::sync::Arc;
+use tracing::instrument;
+use std::{collections::HashMap, sync::Arc};
 
 pub(crate) struct Provisioner {
     conf: Arc<PveConfig>,
@@ -20,11 +23,41 @@ impl Provisioner {
             conf,
         })
     }
-    pub async fn provision(&self, _runner_token: SecretString) -> color_eyre::Result<()> {
-        let vm_id = self.get_new_vm_id().await?;
-        self.create_vm(vm_id).await?;
 
-        // TODO: cloudinit
+    #[instrument(skip_all)]
+    pub async fn provision(&self, org: String, repo: String, labels: Vec<String>, runner_token: SecretString) -> color_eyre::Result<()> {
+        let vmid = self.get_new_vm_id().await?;
+        let template_path = self.conf.snippets_template_path();
+        let output_filename = format!("{vmid}.yaml");
+        let output_path = format!("{}/{output_filename}", self.conf.snippets_local_dir);
+
+        let repo = format!("{org}/{repo}");
+        let params = CloudConfigParams {
+            vmid,
+            repo,
+            labels,
+            runner_token,
+        };
+
+        tracing::info!(output_path, "Generating cloud-init config");
+        let cloud_gen = CloudConfigGenerator::new(template_path, output_path);
+        cloud_gen.generate(params)?;
+
+        self.create_vm(vmid).await?;
+
+        let mut extra = HashMap::new();
+        extra.insert("cicustom".to_string(), format!("user=local-isos:snippets/{output_filename}").into());
+
+        tracing::info!("Updating VM config with cloud-init config");
+        let config = VmConfigUpdateParams {
+            ipconfig0: Some("ip=dhcp".to_string()),
+            extra,
+            ..Default::default()
+        };
+        self.client.update_vm_config(self.conf.node.as_str(), vmid as u32, &config).await?;
+
+        tracing::info!(vmid, "Starting VM");
+        self.client.start_vm(self.conf.node.as_str(), vmid as u32, None).await?;
 
         Ok(())
     }
@@ -32,6 +65,8 @@ impl Provisioner {
     fn get_random_vm_id(&self) -> u16 {
         rand::random_range(self.conf.runner_vmid_min..=self.conf.runner_vmid_max)
     }
+
+    #[instrument(skip(self))]
     async fn get_new_vm_id(&self) -> color_eyre::Result<u16> {
         let vm_ids: Vec<_> = self.client.list_cluster_resources()
             .await?
@@ -46,6 +81,7 @@ impl Provisioner {
         Ok(new_id)
     }
 
+    #[instrument(skip(self))]
     async fn create_vm(&self, vmid: u16) -> color_eyre::Result<()> {
         let params = VmCloneParams {
             newid: vmid as u32,
@@ -54,6 +90,7 @@ impl Provisioner {
             // description: "".to_string(), // TODO: add job URL,
             ..Default::default()
         };
+        tracing::info!(vmid, "Cloning VM into runner");
         self.client.clone_vm(self.conf.node.as_str(), self.conf.template_vmid as u32, &params).await?;
         Ok(())
     }

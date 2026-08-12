@@ -91,7 +91,7 @@ impl WebhookHandler {
         match Provisioner::new(self.conf.pve.clone())
         {
             Ok(provisioner) => {
-                provisioner.provision(token.token.into()).await?;
+                provisioner.provision(owner, repo, self.conf.github.runner_labels.clone(), token.token.into()).await?;
                 HandleState::Handled.into()
             },
             Err(error) => {
