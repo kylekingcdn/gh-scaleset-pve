@@ -34,13 +34,13 @@ impl CloudConfigGenerator {
         let template = self.read_template()?;
         let output = Self::build(template, params);
         self.write_output(output)?;
-        
+
         Ok(self.output_path)
     }
 }
 
 pub(crate) struct CloudConfigParams {
-    pub vmid: u16,
+    pub vmid: u32,
     pub repo: String,
     pub labels: Vec<String>,
     pub runner_token: SecretString,

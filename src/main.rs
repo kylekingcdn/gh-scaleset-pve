@@ -2,12 +2,14 @@ pub(crate) mod cloud_config;
 pub(crate) mod conf;
 pub(crate) mod middleware;
 pub(crate) mod provision;
+pub(crate) mod reaper;
 pub(crate) mod vm_metadata;
 pub(crate) mod webhook;
 
 use crate::{
     conf::Conf,
     middleware::github_webhook::ValidateGitHubWebhookLayer,
+    reaper::Reaper,
     webhook::{Event, WebhookHandler},
 };
 
@@ -21,6 +23,7 @@ use axum::{
 use secrecy::ExposeSecret;
 use std::sync::Arc;
 use tokio::net::TcpListener;
+use tokio::task::JoinSet;
 use tracing_kickstart::otel_sdk::propagation::TraceContextPropagator;
 use tracing_kickstart::otel::global;
 
@@ -74,11 +77,22 @@ async fn main() -> color_eyre::Result<()> {
         .route("/webhook", post(webhook).layer(webhook_layer))
         .with_state(state);
 
-    // run our app with hyper
+    // init task set
+    let mut join_set = JoinSet::new();
+
+    // init api task
     let listen_addr = (conf.api.listen_host.clone(), conf.api.listen_port);
     let listener = TcpListener::bind(listen_addr).await.unwrap();
     tracing::info!("listening on {}", listener.local_addr().unwrap());
-    axum::serve(listener, app).await?;
+    join_set.spawn(async move { axum::serve(listener, app).await });
+
+    // init reaper task
+    let reaper = Reaper::new(conf.pve.clone())?;
+    join_set.spawn(async move { let res = reaper.monitor().await; Ok(res) });
+
+    while let Some(res) = join_set.join_next().await {
+        tracing::error!(?res, "Task ended prematurely?");
+    }
 
     Ok(())
 }

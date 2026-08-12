@@ -1,11 +1,12 @@
 use config::{Config, Environment};
 use dotenvy::dotenv;
 use secrecy::SecretString;
-use serde_with::{StringWithSeparator, serde_as};
+use serde_with::{DurationSeconds, StringWithSeparator, serde_as};
 use serde_with::formats::CommaSeparator;
 use serde::Deserialize;
 use std::net::Ipv4Addr;
 use std::sync::Arc;
+use std::time::Duration;
 use tracing_kickstart::TracingConfig;
 use url::Url;
 
@@ -130,6 +131,8 @@ impl GithubConfig {
         ]
     }
 }
+
+#[serde_as]
 #[derive(Debug, Clone, Deserialize)]
 pub(crate) struct PveConfig {
     pub host_url: Url,
@@ -139,27 +142,44 @@ pub(crate) struct PveConfig {
     // pub cluster: String,
     pub node: String,
 
-    pub template_vmid: u16,
+    pub template_vmid: u32,
 
     pub snippets_local_dir: String,
     pub snippets_template_name: String,
 
     #[serde(default = "PveConfig::runner_vmid_min_default")]
-    pub runner_vmid_min: u16,
+    pub runner_vmid_min: u32,
     #[serde(default = "PveConfig::runner_vmid_max_default")]
-    pub runner_vmid_max: u16,
+    pub runner_vmid_max: u32,
+
+    #[serde_as(as = "DurationSeconds<u64>")]
+    #[serde(default = "PveConfig::reap_interval_default")]
+    pub reap_interval: Duration,
+
+    #[serde(default = "PveConfig::reap_dryrun_default")]
+    pub reap_dryrun: bool,
 }
 impl PveConfig {
     #[must_use]
-    pub fn runner_vmid_min_default() -> u16 {
+    pub fn runner_vmid_min_default() -> u32 {
         5000
     }
     #[must_use]
-    pub fn runner_vmid_max_default() -> u16 {
+    pub fn runner_vmid_max_default() -> u32 {
         5999
     }
+    #[must_use]
+    pub fn reap_interval_default() -> Duration {
+        Duration::from_mins(1)
+    }
+    #[must_use]
+    pub fn reap_dryrun_default() -> bool {
+        false
+    }
+    #[must_use]
     pub fn snippets_template_path(&self) -> String {
         format!("{}/{}", self.snippets_local_dir, self.snippets_template_name)
     }
+
 }
 
