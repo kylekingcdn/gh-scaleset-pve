@@ -95,6 +95,7 @@ impl Provisioner {
             name: Some(format!("github-runner-{vmid}")),
             full: Some(false),
             description: Some(metadata.to_yaml()?),
+            pool: self.conf.runner_pool.clone(),
             ..Default::default()
         };
         tracing::info!(vmid, "Cloning VM into runner");

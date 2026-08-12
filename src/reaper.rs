@@ -77,12 +77,13 @@ impl Reaper {
 
     #[instrument(skip_all)]
     async fn reap_vms(&self) -> color_eyre::Result<()> {
-        tracing::info!("Reaping vms");
+        tracing::info!("Checking for VMs to prune");
         let resources = self.client.list_cluster_resources().await?;
 
         for resource in resources {
             if let Some(id) = resource.vmid {
                 let id = id as u32;
+                // base case - vmid range
                 if id >= self.conf.runner_vmid_min && id <= self.conf.runner_vmid_max {
                     // determine if vm should be purged
                     match self.check_reap(id, &resource).await {
@@ -91,12 +92,12 @@ impl Reaper {
                                 // execute deletion
                                 let reap_res = self.reap_vm(id, decision.vm_is_running).await;
                                 if let Err(error) = reap_res {
-                                    tracing::error!(id, "Error reaping vm: {error}");
+                                    tracing::error!(id, "Error pruning vm: {error}");
                                 }
                             }
                         },
                         Err(error) => {
-                            tracing::error!("Skipping reap on vm due to check error: {error}");
+                            tracing::error!("Skipping prune on vm due to check error: {error}");
                         },
                     }
                 }
@@ -108,30 +109,41 @@ impl Reaper {
     #[instrument(skip_all, fields(vmid, name=?resource.name))]
     async fn check_reap(&self, vmid: u32, resource: &ClusterResource) -> color_eyre::Result<ReapDecision> {
         let vm_name = resource.name.clone().unwrap_or("[no name]".to_string());
-        tracing::info!(vmid, vm_name, "Checking vm for reap");
+        tracing::info!(vmid, vm_name, "Checking vm for prune");
 
         // fetch config, parse status + description
         let config = self.client.get_vm_config(&self.conf.node, vmid).await?;
         let Some(description_url) = config.description else {
             color_eyre::eyre::bail!("Failed to get vm description");
         };
+        // fixme: store as base64 json in comment
         let Ok(description) = urlencoding::decode(&description_url) else {
             color_eyre::eyre::bail!("Failed to decode vm description");
         };
-        tracing::debug!("decoded description: {description}");
+        // tracing::debug!("decoded description: {description}");
 
         let Some(status) = resource.status.as_deref() else {
             color_eyre::eyre::bail!("Failed to get vm status");
         };
         let metadata: VmMetadata = serde_yaml::from_str(&description)?;
-
         let vm_age = metadata.vm_age();
         let vm_age_sec = vm_age.num_seconds();
 
         // check min age
         if vm_age < Self::MIN_VM_AGE {
-            tracing::info!(vmid, vm_name, vm_age_sec, threshold_sec=Self::MIN_VM_AGE.num_seconds(), "Not reaping VM - newer than min age threshold");
+            tracing::info!(vmid, vm_name, vm_age_sec, threshold_sec=Self::MIN_VM_AGE.num_seconds(), "Not pruning VM - newer than min age threshold");
             return Ok(ReapDecision::skip(status));
+        }
+
+        // runner pool manually configured, add extra check for matching pool
+        #[allow(clippy::collapsible_if)]
+        if self.conf.runner_pool.is_some() {
+            if self.conf.runner_pool != resource.pool {
+                tracing::warn!(vmid, vm_name, configured_pool=self.conf.runner_pool, vm_pool=resource.pool, "Not pruning VM - vm is not a member of the configured pool");
+            }
+            // else {
+            //     tracing::debug!(vmid, vm_name, configured_pool=self.conf.runner_pool, "VM is a member of the configured runners pool");
+            // }
         }
 
         // check status
@@ -139,15 +151,15 @@ impl Reaper {
             "running" => {
                 // check max age
                 if vm_age > Self::MAX_VM_AGE {
-                    tracing::info!(vmid, vm_name, vm_age_sec, threshold_min=Self::MIN_VM_AGE.num_minutes(), "Reaping running VM - older than max age threshold");
+                    tracing::info!(vmid, vm_name, vm_age_sec, threshold_min=Self::MIN_VM_AGE.num_minutes(), "Pruning running VM - older than max age threshold");
                     Ok(ReapDecision::reap(status))
                 } else {
-                    tracing::info!(vmid, vm_name, vm_age_sec, threshold_sec=Self::MIN_VM_AGE.num_seconds(), "Not reaping running VM - newer than min age threshold");
+                    tracing::info!(vmid, vm_name, vm_age_sec, threshold_sec=Self::MAX_VM_AGE.num_seconds(), "Not pruning running VM - newer than min age threshold");
                     Ok(ReapDecision::skip(status))
                 }
             },
             "stopped" => {
-                tracing::info!(vmid, vm_name, vm_age_sec, "Reaping stopped VM");
+                tracing::info!(vmid, vm_name, vm_age_sec, "Issuing prune on non-running VM");
                 Ok(ReapDecision::reap(status))
             },
             status_name => unreachable!("unexpected status: {status_name}"),
@@ -156,7 +168,7 @@ impl Reaper {
 
     #[instrument(skip(self))]
     async fn reap_vm(&self, vmid: u32, is_running: bool) -> color_eyre::Result<()> {
-        tracing::warn!(vmid, is_running, "Reaping VM");
+        tracing::warn!(vmid, is_running, "Pruning VM");
 
         // stop vm if running
         if is_running {

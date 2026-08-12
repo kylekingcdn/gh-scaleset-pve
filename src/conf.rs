@@ -138,24 +138,21 @@ pub(crate) struct PveConfig {
     pub host_url: Url,
     pub token_id: String,
     pub token_secret: SecretString,
-
-    // pub cluster: String,
     pub node: String,
-
-    pub template_vmid: u32,
 
     pub snippets_local_dir: String,
     pub snippets_template_name: String,
 
+    pub template_vmid: u32,
     #[serde(default = "PveConfig::runner_vmid_min_default")]
     pub runner_vmid_min: u32,
     #[serde(default = "PveConfig::runner_vmid_max_default")]
     pub runner_vmid_max: u32,
+    pub runner_pool: Option<String>,
 
     #[serde_as(as = "DurationSeconds<u64>")]
     #[serde(default = "PveConfig::reap_interval_default")]
     pub reap_interval: Duration,
-
     #[serde(default = "PveConfig::reap_dryrun_default")]
     pub reap_dryrun: bool,
 }
