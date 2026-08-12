@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, TimeDelta, Utc};
 use octocrab::models::{
     Repository,
     Author,
@@ -6,7 +6,6 @@ use octocrab::models::{
         payload::WorkflowJobWebhookEventPayload,
 }};
 use serde::{Deserialize, Serialize};
-use serde_with::{serde_as, TimestampSeconds};
 use url::Url;
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -20,26 +19,27 @@ pub struct WorkflowJobPayloadData {
     name: String,
 }
 
-#[serde_as]
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct VmMetadata {
-    workflow_name: String,
+    pub workflow_name: String,
 
-    repo: String,
-    repo_url: Url,
+    pub repo: String,
+    pub repo_url: Url,
 
-    job_id: u64,
-    job_url: Url,
-    job_name: String,
-    job_created_at: DateTime<Utc>,
+    pub job_id: u64,
+    pub job_url: Url,
+    pub job_name: String,
+    pub job_created_at: DateTime<Utc>,
 
-    run_id: u64,
-    run_url: Url,
+    pub run_id: u64,
+    pub run_url: Url,
 
-    #[serde_as(as = "TimestampSeconds<i64>")]
-    vm_created_at: DateTime<Utc>,
+    pub vm_created_at: DateTime<Utc>,
 }
 impl VmMetadata {
+    pub fn vm_age(&self) -> TimeDelta {
+        Utc::now() - self.vm_created_at
+    }
     pub fn try_from_event(
         workflow_job: &WorkflowJobWebhookEventPayload,
         repo: &Repository,

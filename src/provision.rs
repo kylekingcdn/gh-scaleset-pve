@@ -90,7 +90,7 @@ impl Provisioner {
     }
 
     #[instrument(skip(self))]
-    async fn create_vm(&self, vmid: u16) -> color_eyre::Result<()> {
+    async fn create_vm(&self, vmid: u32, metadata: VmMetadata) -> color_eyre::Result<()> {
         let params = VmCloneParams {
             newid: vmid as u32,
             name: Some(format!("github-runner-{vmid}")),
