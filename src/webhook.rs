@@ -57,6 +57,8 @@ impl WebhookHandler {
             return Err(color_eyre::eyre::eyre!("event payload doesn't match kind").into());
         };
 
+        // TODO: trigger prune on job completed?
+
         // check job action
         if payload.action != WorkflowJobWebhookEventAction::Queued {
             return IgnoreReason::WorkflowJobEventActionMismatch { action: json_display(payload.action) }.into();
@@ -140,7 +142,7 @@ impl From<IgnoreReason> for HandleResult {
 pub enum HandleError {
     #[error(transparent)]
     Metadata(#[from] VmMetadataError),
-    #[error("An unexpected error occured")]
+    #[error("An unexpected error occurred")]
     Eyre(#[from] color_eyre::Report),
 }
 

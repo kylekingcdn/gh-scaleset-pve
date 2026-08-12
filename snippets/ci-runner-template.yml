@@ -3,7 +3,7 @@
 # - VMID
 # - GH_REPO (owner/repo-name)
 # - RUNNER_TOKEN
-# - RUNNER_LABELS (comma separated)
+# - LABELS (comma separated)
 hostname: ci-runner-${VMID}
 manage_etc_hosts: true
 users:

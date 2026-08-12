@@ -35,12 +35,12 @@ RUN \
 # -- Prod serve API stage -- #
 
 FROM prod_base AS prod_api
-LABEL org.opencontainers.image.description="gh-pve-webhook"
-LABEL org.opencontainers.image.source=https://github.com/kylekingcdn/gh-pve-webhook-rs
+LABEL org.opencontainers.image.description="gh-scaleset-pve"
+LABEL org.opencontainers.image.source=https://github.com/kylekingcdn/gh-scaleset-pve
 
 COPY --from=prod_build \
-    /app/target/release/gh-pve-webhook /usr/local/bin/gh-pve-webhook
+    /app/target/release/gh-scaleset-pve /usr/local/bin/gh-scaleset-pve
 
 # Use entrypoint over command to allow for generate cmd invocation
-ENTRYPOINT ["/usr/local/bin/gh-pve-webhook"]
+ENTRYPOINT ["/usr/local/bin/gh-scaleset-pve"]
 CMD []

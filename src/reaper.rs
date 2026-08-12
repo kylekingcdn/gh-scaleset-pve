@@ -187,12 +187,13 @@ impl Reaper {
             ..Default::default()
         };
         if self.conf.reap_dryrun {
-            tracing::warn!(vmid, "Destroying VM ---- dry-run ----");
+            tracing::warn!(vmid, "Destroying VM ---- dry-run / no-op ----");
+            tracing::warn!(vmid, "VM destroyed ---- dry-run / no-op ----");
         } else {
             tracing::warn!(vmid, "Destroying VM");
             self.client.delete_vm(&self.conf.node, vmid, Some(&params)).await?;
+            tracing::warn!(vmid, "VM destroyed");
         }
-        tracing::warn!(vmid, "VM destroyed");
 
         Ok(())
     }

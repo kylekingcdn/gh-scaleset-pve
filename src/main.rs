@@ -27,25 +27,6 @@ use tokio::task::JoinSet;
 use tracing_kickstart::otel_sdk::propagation::TraceContextPropagator;
 use tracing_kickstart::otel::global;
 
-// !- API execution
-
-fn default_env_filter() -> [&'static str; 12] {
-    [
-        "h2=info",
-        "hyper_util=info",
-        "hyper=info",
-        "opentelemetry_sdk=info",
-        "opentelemetry-http=info",
-        "opentelemetry-otlp=info",
-        "reqwest::connect=info",
-        "rustls=info",
-        "sqlx::query=info",
-        "tendermint_rpc=info",
-        "gh-pve-webhook=debug",
-        "debug",
-    ]
-}
-
 #[derive(Debug, Clone)]
 pub struct AppState {
     conf: Arc<conf::SharedConf>,
@@ -114,4 +95,19 @@ async fn webhook(
             StatusCode::OK
         }
     }
+}
+
+fn default_env_filter() -> [&'static str; 10] {
+    [
+        "h2=info",
+        "hyper_util=info",
+        "hyper=info",
+        "opentelemetry_sdk=info",
+        "opentelemetry-http=info",
+        "opentelemetry-otlp=info",
+        "reqwest::connect=info",
+        "rustls=info",
+        "gh-scaleset-pve=debug",
+        "debug",
+    ]
 }
