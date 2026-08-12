@@ -33,6 +33,7 @@ secrecy = { version = "0.10.3", features = ["serde"] }
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0.151"
 serde_with = { version = "3.21.0", features = ["chrono_0_4", "schemars_0_9"] }
+serde_yaml = "0.9.34"
 sha2 = "0.11.0"
 thiserror = "2.0.19"
 tokio = { version = "1.53", features = ["full"] }

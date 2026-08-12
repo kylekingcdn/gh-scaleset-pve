@@ -1,12 +1,19 @@
 use crate::{
-    cloud_config::{CloudConfigGenerator,CloudConfigParams},
+    cloud_config::{CloudConfigGenerator, CloudConfigParams},
     conf::PveConfig,
+    vm_metadata::VmMetadata,
 };
 
-use proxmox_client::{ProxmoxClient, nodes::qemu::{VmConfigUpdateParams, VmCloneParams}};
+use proxmox_client::{
+    ProxmoxClient,
+    nodes::qemu::{VmConfigUpdateParams, VmCloneParams},
+};
 use secrecy::{ExposeSecret, SecretString};
+use std::{
+    collections::HashMap,
+    sync::Arc,
+};
 use tracing::instrument;
-use std::{collections::HashMap, sync::Arc};
 
 pub(crate) struct Provisioner {
     conf: Arc<PveConfig>,
@@ -25,7 +32,7 @@ impl Provisioner {
     }
 
     #[instrument(skip_all)]
-    pub async fn provision(&self, org: String, repo: String, labels: Vec<String>, runner_token: SecretString) -> color_eyre::Result<()> {
+    pub async fn provision(&self, org: String, repo: String, metadata: VmMetadata, labels: Vec<String>, runner_token: SecretString) -> color_eyre::Result<()> {
         let vmid = self.get_new_vm_id().await?;
         let template_path = self.conf.snippets_template_path();
         let output_filename = format!("{vmid}.yaml");
@@ -50,6 +57,7 @@ impl Provisioner {
 
         tracing::info!("Updating VM config with cloud-init config");
         let config = VmConfigUpdateParams {
+            description: Some(metadata.to_yaml()?),
             ipconfig0: Some("ip=dhcp".to_string()),
             extra,
             ..Default::default()

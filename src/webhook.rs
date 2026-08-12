@@ -1,6 +1,7 @@
 use crate::{
     conf::SharedConf,
     provision::Provisioner,
+    vm_metadata::{VmMetadata, VmMetadataError},
 };
 
 use axum::{
@@ -40,15 +41,16 @@ impl WebhookHandler {
         tracing::debug!("Event kind passed: {:#?}", event.kind);
 
         // check owner
-        let Some(owner) = event.repository_owner_name() else {
+        let Some(owner_name) = event.repository_owner_name() else {
             return IgnoreReason::OwnerMissing.into();
         };
-        let repo = event.repository_name().expect("repository should already be validated");
+        let repo = event.repository.expect("repository should already be validated");
+        let owner = repo.owner.clone().expect("repository owner should already be validated");
 
-        if let Some(allowed_owners) = &self.conf.github.repo_owners && !allowed_owners.contains(&owner)  {
-            return IgnoreReason::OwnerNotPermitted { owner: owner.clone() }.into();
+        if let Some(allowed_owners) = &self.conf.github.repo_owners && !allowed_owners.contains(&owner_name)  {
+            return IgnoreReason::OwnerNotPermitted { owner: owner_name }.into();
         }
-        tracing::debug!("Repository owner passed: {owner}");
+        tracing::debug!("Repository owner passed: {owner_name}");
 
         // extract payload
         let WebhookEventPayload::WorkflowJob(payload) = event.payload else {
@@ -83,15 +85,16 @@ impl WebhookHandler {
         tracing::debug!("Job runner labels passed: [{}]", label_strs.join(", "));
 
         // TODO: dedicated filter fn, returning org name
+        let metadata = VmMetadata::try_from_event(&payload, &repo, &owner)?;
 
         // add new runner
-        let token = self.init_runner(&owner, &repo).await?;
+        let token = self.init_runner(&owner_name, &repo.name).await?;
 
         // provision vm
         match Provisioner::new(self.conf.pve.clone())
         {
             Ok(provisioner) => {
-                provisioner.provision(owner, repo, self.conf.github.runner_labels.clone(), token.token.into()).await?;
+                provisioner.provision(owner_name, repo.name, metadata, self.conf.github.runner_labels.clone(), token.token.into()).await?;
                 HandleState::Handled.into()
             },
             Err(error) => {
@@ -135,6 +138,8 @@ impl From<IgnoreReason> for HandleResult {
 
 #[derive(Debug, thiserror::Error)]
 pub enum HandleError {
+    #[error(transparent)]
+    Metadata(#[from] VmMetadataError),
     #[error("An unexpected error occured")]
     Eyre(#[from] color_eyre::Report),
 }
@@ -184,9 +189,6 @@ pub struct Event {
 impl Event {
     pub fn repository_owner_name(&self) -> Option<String> {
         self.repository.as_ref().and_then(|r| r.owner.as_ref()).map(|o| o.login.clone())
-    }
-    pub fn repository_name(&self) -> Option<String> {
-        self.repository.as_ref().map(|r| r.name.clone())
     }
 }
 

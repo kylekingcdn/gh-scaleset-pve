@@ -2,6 +2,7 @@ pub(crate) mod cloud_config;
 pub(crate) mod conf;
 pub(crate) mod middleware;
 pub(crate) mod provision;
+pub(crate) mod vm_metadata;
 pub(crate) mod webhook;
 
 use crate::{
