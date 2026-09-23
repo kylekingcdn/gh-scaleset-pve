@@ -4,7 +4,7 @@ description = "GitHub Actions Runner Scale Set for Proxmox"
 version = "0.1.0"
 edition = "2024"
 rust-version = "1.91"
-repository = "https://github.com/kylekingcdn/gh-scaleset-pve-rs"
+repository = "https://github.com/kylekingcdn/gh-scaleset-pve"
 license = "MIT"
 publish = false
 

@@ -1,4 +1,4 @@
-# `gh-scaleset-pve-rs`
+# `gh-scaleset-pve`
 
 GitHub Actions Runner Scale Set for Proxmox (in Rust)
 
