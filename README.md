@@ -2,7 +2,7 @@
 
 GitHub Actions Runner Scale Set for Proxmox (in Rust)
 
-The was inspired by this excellent write-up on the topic:
+This was inspired by the following excellent write-up:
 - [SysRoot - Ephemeral Self-Hosted CI Runners on Proxmox](https://sysroot.io/blog/github-actions-self-hosted-runners-on-proxmox-ephemeral)
 
 ## Features
